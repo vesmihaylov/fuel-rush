@@ -7,11 +7,17 @@ public class LapManager : MonoBehaviour
 {
     public int totalLaps = 3;
     public GameObject player;
+
+    // UI Elements
     public TextMeshProUGUI totalLapsPlaceholder;
+    public TextMeshProUGUI currentLapTimeLabel;
     public TextMeshProUGUI currentLapTimePlaceholder;
     public TextMeshProUGUI totalRaceTimePlaceholder;
     public TextMeshProUGUI raceFinishedLabel;
     public TextMeshProUGUI completedLapTimePlaceholder;
+    public List<TextMeshProUGUI> lapNumbersLeaderboardList;
+    public List<TextMeshProUGUI> lapTimesLeaderboardList;
+    public GameObject lapLeaderboard;
 
     private int currentLap = 1;
     private float lapStartTime;
@@ -29,6 +35,7 @@ public class LapManager : MonoBehaviour
         totalRaceTimePlaceholder.enabled = false;
         raceFinishedLabel.enabled = false;
         completedLapTimePlaceholder.enabled = false;
+        lapLeaderboard.SetActive(false);
         UpdateTotalLapsUI();
     }
     private void Update()
@@ -83,15 +90,24 @@ public class LapManager : MonoBehaviour
 
     private void FinishRace()
     {
+        DisableLapHUD();
+        DisableVehicleControls();
+        EnableRaceFinishedText();
+        StartCoroutine(ShowLeaderboardAfterDelay());
+    }
+
+    private void DisableLapHUD()
+    {
+        currentLapTimePlaceholder.enabled = false;
+        currentLapTimeLabel.enabled = false;
+        totalLapsPlaceholder.enabled = false;
+    }
+
+    private void EnableRaceFinishedText()
+    {
         raceFinishedLabel.enabled = true;
         totalRaceTimePlaceholder.enabled = true;
         totalRaceTimePlaceholder.text = $"{FormatTime(totalRaceTime)}";
-        Debug.Log("Race Completed! Lap Times:");
-        for (int i = 0; i < lapTimes.Count; i++)
-        {
-            Debug.Log($"Lap {i + 1}: {FormatTime(lapTimes[i])}");
-        }
-        DisableVehicleControls();
     }
 
     private void DisableVehicleControls()
@@ -105,14 +121,6 @@ public class LapManager : MonoBehaviour
         {
             Debug.LogWarning("VehicleController script not found on player object!");
         }
-    }
-
-    private string FormatTime(float time)
-    {
-        int minutes = Mathf.FloorToInt(time / 60);
-        float seconds = time % 60;
-
-        return $"{minutes:00}:{seconds:00.00}";
     }
 
     private void UpdateTotalLapsUI()
@@ -146,5 +154,50 @@ public class LapManager : MonoBehaviour
         completedLapTimePlaceholder.text = $"Lap Time: {FormatTime(lapTime)}";
         yield return new WaitForSeconds(2f);
         completedLapTimePlaceholder.enabled = false;
+    }
+
+    private IEnumerator ShowLeaderboardAfterDelay()
+    {
+        yield return new WaitForSeconds(3f);
+
+        raceFinishedLabel.enabled = false;
+        totalRaceTimePlaceholder.enabled = false;
+
+        PopulateLapLeaderboard();
+    }
+
+    private void PopulateLapLeaderboard()
+    {
+        lapLeaderboard.SetActive(true);
+
+        foreach (Transform child in lapNumbersLeaderboardList[0].transform.parent)
+        {
+            if (child.gameObject != lapNumbersLeaderboardList[0].gameObject)
+                Destroy(child.gameObject);
+        }
+        foreach (Transform child in lapTimesLeaderboardList[0].transform.parent)
+        {
+            if (child.gameObject != lapTimesLeaderboardList[0].gameObject)
+                Destroy(child.gameObject);
+        }
+
+        for (int i = 0; i < lapTimes.Count; i++)
+        {
+            var lapNumberInstance = Instantiate(lapNumbersLeaderboardList[0], lapNumbersLeaderboardList[0].transform.parent);
+            lapNumberInstance.text = $"Lap {i + 1}";
+            lapNumberInstance.gameObject.SetActive(true);
+
+            var lapTimeInstance = Instantiate(lapTimesLeaderboardList[0], lapTimesLeaderboardList[0].transform.parent);
+            lapTimeInstance.text = FormatTime(lapTimes[i]);
+            lapTimeInstance.gameObject.SetActive(true);
+        }
+    }
+
+    private string FormatTime(float time)
+    {
+        int minutes = Mathf.FloorToInt(time / 60);
+        float seconds = time % 60;
+
+        return $"{minutes:00}:{seconds:00.00}";
     }
 }
