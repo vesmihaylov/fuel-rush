@@ -6,11 +6,6 @@ public class WheelRotation : MonoBehaviour
     public Transform wheelMesh;
     public bool wheelTurn;
 
-    void Start()
-    {
-        
-    }
-
     void Update()
     {
         if (wheelTurn)
