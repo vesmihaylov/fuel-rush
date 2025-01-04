@@ -42,6 +42,7 @@ public class LapManager : MonoBehaviour
         startCountdownPlaceholder.enabled = true;
         UpdateTotalLapsUI();
     }
+
     private void Update()
     {
         if (currentLap <= totalLaps && !lapCompleted)
@@ -107,6 +108,13 @@ public class LapManager : MonoBehaviour
         totalLapsPlaceholder.enabled = false;
     }
 
+    private void EnableLapHUD()
+    {
+        currentLapTimePlaceholder.enabled = true;
+        currentLapTimeLabel.enabled = true;
+        totalLapsPlaceholder.enabled = true;
+    }
+
     private void EnableRaceFinishedText()
     {
         raceFinishedLabel.enabled = true;
@@ -154,21 +162,24 @@ public class LapManager : MonoBehaviour
     {
         completedLapTimePlaceholder.enabled = true;
 
+        string timeDifferenceBetweenLaps = "";
 
         if (lapTimes.Count == 1)
         {
             completedLapTimePlaceholder.color = Color.white;
         }
-        else if (lapTimes.Count > 1 && lapTime < lapTimes[lapTimes.Count - 2])
+        else if (lapTimes.Count > 1)
         {
-            completedLapTimePlaceholder.color = Color.green;
-        }
-        else
-        {
-            completedLapTimePlaceholder.color = Color.red;
+            float previousLapTime = lapTimes[lapTimes.Count - 2];
+            float timeDifference = lapTime - previousLapTime;
+
+            timeDifferenceBetweenLaps = $" ({(timeDifference > 0 ? "+" : "")}{timeDifference:F2})";
+
+            completedLapTimePlaceholder.color = timeDifference < 0 ? Color.green : Color.red;
         }
 
-        completedLapTimePlaceholder.text = $"Lap Time: {FormatTime(lapTime)}";
+        completedLapTimePlaceholder.text = $"Lap Time: {FormatTime(lapTime)}{timeDifferenceBetweenLaps}";
+
         yield return new WaitForSeconds(2f);
         completedLapTimePlaceholder.enabled = false;
     }
@@ -185,6 +196,7 @@ public class LapManager : MonoBehaviour
 
     private IEnumerator StartRaceCountdown()
     {
+        DisableLapHUD();
         for (int i = StartCountdownSeconds; i > 0; i--)
         {
             startCountdownPlaceholder.text = i.ToString();
@@ -192,6 +204,7 @@ public class LapManager : MonoBehaviour
         }
 
         startCountdownPlaceholder.text = "GO!";
+        EnableLapHUD();
         EnableVehicleControls();
         lapStartTime = Time.time;
         yield return new WaitForSeconds(1f);
@@ -201,27 +214,33 @@ public class LapManager : MonoBehaviour
     private void PopulateLapLeaderboard()
     {
         lapLeaderboard.SetActive(true);
-
-        foreach (Transform child in lapNumbersLeaderboardList[0].transform.parent)
-        {
-            if (child.gameObject != lapNumbersLeaderboardList[0].gameObject)
-                Destroy(child.gameObject);
-        }
-        foreach (Transform child in lapTimesLeaderboardList[0].transform.parent)
-        {
-            if (child.gameObject != lapTimesLeaderboardList[0].gameObject)
-                Destroy(child.gameObject);
-        }
+        ClearLapLeaderboard();
 
         for (int i = 0; i < lapTimes.Count; i++)
         {
-            var lapNumberInstance = Instantiate(lapNumbersLeaderboardList[0], lapNumbersLeaderboardList[0].transform.parent);
+            var lapNumberInstance =
+                Instantiate(lapNumbersLeaderboardList[0], lapNumbersLeaderboardList[0].transform.parent);
             lapNumberInstance.text = $"Lap {i + 1}";
             lapNumberInstance.gameObject.SetActive(true);
 
             var lapTimeInstance = Instantiate(lapTimesLeaderboardList[0], lapTimesLeaderboardList[0].transform.parent);
             lapTimeInstance.text = FormatTime(lapTimes[i]);
             lapTimeInstance.gameObject.SetActive(true);
+        }
+    }
+
+    private void ClearLapLeaderboard()
+    {
+        foreach (Transform child in lapNumbersLeaderboardList[0].transform.parent)
+        {
+            if (child.gameObject != lapNumbersLeaderboardList[0].gameObject)
+                Destroy(child.gameObject);
+        }
+
+        foreach (Transform child in lapTimesLeaderboardList[0].transform.parent)
+        {
+            if (child.gameObject != lapTimesLeaderboardList[0].gameObject)
+                Destroy(child.gameObject);
         }
     }
 
