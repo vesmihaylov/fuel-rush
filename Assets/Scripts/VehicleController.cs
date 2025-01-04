@@ -17,7 +17,7 @@ public class VehicleController : MonoBehaviour
     private float unstuckTimer = 0f; // Timer for holding 'T'
     private bool isUnstuckButtonHeld = false;
     private Vector3 previousPosition;
-    private float stuckTime = 0f;
+    private float stuckTime = 0f;       
 
     void Start()
     {
@@ -148,5 +148,19 @@ public class VehicleController : MonoBehaviour
         rlw.brakeTorque = 1;
         rrw.brakeTorque = 1;
         this.enabled = false;
+    }
+
+    public void StartVehicle()
+    {
+        float motor = verticalInput * driveSpeed;
+        flw.motorTorque = motor;
+        frw.motorTorque = motor;
+        rlw.motorTorque = motor;
+        rrw.motorTorque = motor;
+        flw.brakeTorque = 0;
+        frw.brakeTorque = 0;
+        rlw.brakeTorque = 0;
+        rrw.brakeTorque = 0;
+        this.enabled = true;
     }
 }

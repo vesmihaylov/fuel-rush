@@ -9,6 +9,7 @@ public class LapManager : MonoBehaviour
     public GameObject player;
 
     // UI Elements
+    public TextMeshProUGUI startCountdownPlaceholder;
     public TextMeshProUGUI totalLapsPlaceholder;
     public TextMeshProUGUI currentLapTimeLabel;
     public TextMeshProUGUI currentLapTimePlaceholder;
@@ -27,15 +28,18 @@ public class LapManager : MonoBehaviour
     private HashSet<GameObject> checkpointsPassed = new HashSet<GameObject>();
     private GameObject[] allCheckpoints;
     private bool lapCompleted = false;
+    private const int StartCountdownSeconds = 5;
 
     private void Start()
     {
+        DisableVehicleControls();
+        StartCoroutine(StartRaceCountdown());
         allCheckpoints = GameObject.FindGameObjectsWithTag("Checkpoint");
-        lapStartTime = Time.time;
         totalRaceTimePlaceholder.enabled = false;
         raceFinishedLabel.enabled = false;
         completedLapTimePlaceholder.enabled = false;
         lapLeaderboard.SetActive(false);
+        startCountdownPlaceholder.enabled = true;
         UpdateTotalLapsUI();
     }
     private void Update()
@@ -123,6 +127,19 @@ public class LapManager : MonoBehaviour
         }
     }
 
+    private void EnableVehicleControls()
+    {
+        var vehicleController = player.GetComponent<VehicleController>();
+        if (vehicleController != null)
+        {
+            vehicleController.StartVehicle();
+        }
+        else
+        {
+            Debug.LogWarning("VehicleController script not found on player object!");
+        }
+    }
+
     private void UpdateTotalLapsUI()
     {
         totalLapsPlaceholder.text = $"Laps: {currentLap}/{totalLaps}";
@@ -164,6 +181,21 @@ public class LapManager : MonoBehaviour
         totalRaceTimePlaceholder.enabled = false;
 
         PopulateLapLeaderboard();
+    }
+
+    private IEnumerator StartRaceCountdown()
+    {
+        for (int i = StartCountdownSeconds; i > 0; i--)
+        {
+            startCountdownPlaceholder.text = i.ToString();
+            yield return new WaitForSeconds(1f);
+        }
+
+        startCountdownPlaceholder.text = "GO!";
+        EnableVehicleControls();
+        lapStartTime = Time.time;
+        yield return new WaitForSeconds(1f);
+        startCountdownPlaceholder.enabled = false;
     }
 
     private void PopulateLapLeaderboard()
