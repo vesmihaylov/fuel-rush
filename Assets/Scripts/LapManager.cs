@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
 
 public class LapManager : MonoBehaviour
@@ -9,16 +8,7 @@ public class LapManager : MonoBehaviour
     public GameObject player;
 
     // UI Elements
-    public TextMeshProUGUI startCountdownPlaceholder;
-    public TextMeshProUGUI totalLapsPlaceholder;
-    public TextMeshProUGUI currentLapTimeLabel;
-    public TextMeshProUGUI currentLapTimePlaceholder;
-    public TextMeshProUGUI totalRaceTimePlaceholder;
-    public TextMeshProUGUI raceFinishedLabel;
-    public TextMeshProUGUI completedLapTimePlaceholder;
-    public List<TextMeshProUGUI> lapNumbersLeaderboardList;
-    public List<TextMeshProUGUI> lapTimesLeaderboardList;
-    public GameObject lapLeaderboard;
+    public RaceUI raceUI;
 
     private int currentLap = 1;
     private float lapStartTime;
@@ -32,22 +22,21 @@ public class LapManager : MonoBehaviour
 
     private void Start()
     {
-        DisableVehicleControls();
+        ToggleVehicle(false);
         StartCoroutine(StartRaceCountdown());
         allCheckpoints = GameObject.FindGameObjectsWithTag("Checkpoint");
-        totalRaceTimePlaceholder.enabled = false;
-        raceFinishedLabel.enabled = false;
-        completedLapTimePlaceholder.enabled = false;
-        lapLeaderboard.SetActive(false);
-        startCountdownPlaceholder.enabled = true;
-        UpdateTotalLapsUI();
+        raceUI.ToggleRaceFinishedPlaceholder(false);
+        raceUI.ToggleCompletedLapTimePlaceholder(false);
+        raceUI.ToggleLapLeaderboard(false);
+        raceUI.ToggleStartCountdownPlaceholder(true);
+        raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
     }
 
     private void Update()
     {
         if (currentLap <= totalLaps && !lapCompleted)
         {
-            UpdateCurrentLapTimeUI();
+            raceUI.UpdateCurrentLapTime($"Time: {TimeUtil.FormatTime(Time.time - lapStartTime)}");
         }
     }
 
@@ -80,7 +69,7 @@ public class LapManager : MonoBehaviour
                 lapStartTime = lapEndTime; // Reset the lap timer
                 checkpointsPassed.Clear(); // Reset checkpoints for the new lap
                 lapCompleted = false;
-                UpdateTotalLapsUI();
+                raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
             }
             else
             {
@@ -95,78 +84,38 @@ public class LapManager : MonoBehaviour
 
     private void FinishRace()
     {
-        DisableLapHUD();
-        DisableVehicleControls();
+        raceUI.ToggleLapHud(false);
+        ToggleVehicle(false);
         EnableRaceFinishedText();
         StartCoroutine(ShowLeaderboardAfterDelay());
     }
 
-    private void DisableLapHUD()
-    {
-        currentLapTimePlaceholder.enabled = false;
-        currentLapTimeLabel.enabled = false;
-        totalLapsPlaceholder.enabled = false;
-    }
-
-    private void EnableLapHUD()
-    {
-        currentLapTimePlaceholder.enabled = true;
-        currentLapTimeLabel.enabled = true;
-        totalLapsPlaceholder.enabled = true;
-    }
-
     private void EnableRaceFinishedText()
     {
-        raceFinishedLabel.enabled = true;
-        totalRaceTimePlaceholder.enabled = true;
-        totalRaceTimePlaceholder.text = $"{FormatTime(totalRaceTime)}";
+        raceUI.ToggleRaceFinishedPlaceholder(true);
+        raceUI.UpdateTotalRaceTime($"{TimeUtil.FormatTime(totalRaceTime)}");
     }
 
-    private void DisableVehicleControls()
+    private void ToggleVehicle(bool isEnabled)
     {
         var vehicleController = player.GetComponent<VehicleController>();
-        if (vehicleController != null)
-        {
-            vehicleController.StopVehicle();
-        }
-        else
+        if (vehicleController == null)
         {
             Debug.LogWarning("VehicleController script not found on player object!");
         }
-    }
 
-    private void EnableVehicleControls()
-    {
-        var vehicleController = player.GetComponent<VehicleController>();
-        if (vehicleController != null)
-        {
-            vehicleController.StartVehicle();
-        }
-        else
-        {
-            Debug.LogWarning("VehicleController script not found on player object!");
-        }
-    }
-
-    private void UpdateTotalLapsUI()
-    {
-        totalLapsPlaceholder.text = $"Laps: {currentLap}/{totalLaps}";
-    }
-
-    private void UpdateCurrentLapTimeUI()
-    {
-        currentLapTimePlaceholder.text = $"Time: {FormatTime(Time.time - lapStartTime)}";
+        vehicleController.ToggleEngine(isEnabled);
     }
 
     private IEnumerator UpdateCompletedLapTimeUI(float lapTime)
     {
-        completedLapTimePlaceholder.enabled = true;
+        raceUI.ToggleCompletedLapTimePlaceholder(true);
 
         string timeDifferenceBetweenLaps = "";
 
         if (lapTimes.Count == 1)
         {
-            completedLapTimePlaceholder.color = Color.white;
+            raceUI.UpdateCompletedLapTimePlaceholderColor(Color.white);
         }
         else if (lapTimes.Count > 1)
         {
@@ -175,80 +124,46 @@ public class LapManager : MonoBehaviour
 
             timeDifferenceBetweenLaps = $" ({(timeDifference > 0 ? "+" : "")}{timeDifference:F2})";
 
-            completedLapTimePlaceholder.color = timeDifference < 0 ? Color.green : Color.red;
+            raceUI.UpdateCompletedLapTimePlaceholderColor(timeDifference < 0 ? Color.green : Color.red);
         }
 
-        completedLapTimePlaceholder.text = $"Lap Time: {FormatTime(lapTime)}{timeDifferenceBetweenLaps}";
+        raceUI.UpdateCompletedLapTimePlaceholderTime(
+            $"Lap Time: {TimeUtil.FormatTime(lapTime)}{timeDifferenceBetweenLaps}");
 
         yield return new WaitForSeconds(2f);
-        completedLapTimePlaceholder.enabled = false;
+        raceUI.ToggleCompletedLapTimePlaceholder(false);
     }
 
     private IEnumerator ShowLeaderboardAfterDelay()
     {
         yield return new WaitForSeconds(3f);
 
-        raceFinishedLabel.enabled = false;
-        totalRaceTimePlaceholder.enabled = false;
+        raceUI.ToggleRaceFinishedPlaceholder(false);
 
         PopulateLapLeaderboard();
     }
 
     private IEnumerator StartRaceCountdown()
     {
-        DisableLapHUD();
+        raceUI.ToggleLapHud(false);
         for (int i = StartCountdownSeconds; i > 0; i--)
         {
-            startCountdownPlaceholder.text = i.ToString();
+            raceUI.UpdateStartCountdownPlaceholderText(i.ToString());
             yield return new WaitForSeconds(1f);
         }
 
-        startCountdownPlaceholder.text = "GO!";
-        EnableLapHUD();
-        EnableVehicleControls();
+        raceUI.UpdateStartCountdownPlaceholderText("GO!");
+        raceUI.ToggleLapHud(true);
+        ToggleVehicle(true);
         lapStartTime = Time.time;
         yield return new WaitForSeconds(1f);
-        startCountdownPlaceholder.enabled = false;
+        raceUI.ToggleStartCountdownPlaceholder(false);
     }
 
     private void PopulateLapLeaderboard()
     {
-        lapLeaderboard.SetActive(true);
-        ClearLapLeaderboard();
-
-        for (int i = 0; i < lapTimes.Count; i++)
-        {
-            var lapNumberInstance =
-                Instantiate(lapNumbersLeaderboardList[0], lapNumbersLeaderboardList[0].transform.parent);
-            lapNumberInstance.text = $"Lap {i + 1}";
-            lapNumberInstance.gameObject.SetActive(true);
-
-            var lapTimeInstance = Instantiate(lapTimesLeaderboardList[0], lapTimesLeaderboardList[0].transform.parent);
-            lapTimeInstance.text = FormatTime(lapTimes[i]);
-            lapTimeInstance.gameObject.SetActive(true);
-        }
-    }
-
-    private void ClearLapLeaderboard()
-    {
-        foreach (Transform child in lapNumbersLeaderboardList[0].transform.parent)
-        {
-            if (child.gameObject != lapNumbersLeaderboardList[0].gameObject)
-                Destroy(child.gameObject);
-        }
-
-        foreach (Transform child in lapTimesLeaderboardList[0].transform.parent)
-        {
-            if (child.gameObject != lapTimesLeaderboardList[0].gameObject)
-                Destroy(child.gameObject);
-        }
-    }
-
-    private string FormatTime(float time)
-    {
-        int minutes = Mathf.FloorToInt(time / 60);
-        float seconds = time % 60;
-
-        return $"{minutes:00}:{seconds:00.00}";
+        raceUI.ToggleLapLeaderboard(true);
+        raceUI.ClearLapLeaderboard();
+        raceUI.PopulateLapLeaderboard(lapTimes);
     }
 }
