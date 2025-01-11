@@ -7,17 +7,9 @@ public class VehicleController : MonoBehaviour
     public float driveSpeed, steerSpeed, brakeTorque;
     public float driftFactor = 0.5f; // Lower values = more sliding
     public float forwardBoost = 400f; // Force applied to maintain forward motion during drift
-    public float unstuckForce = 5000f; // Force applied to "unstick" the car
-    public float unstuckUpwardForce = 5000f; // Additional upward force to lift the car if stuck
-    public float stuckThreshold = 0.5f; // Speed threshold to determine if the car is stuck
-    public float unstuckHoldTime = 1f; // Time in seconds to hold T before triggering unstuck action
     float horizontalInput, verticalInput;
     private bool isHandbrakeEngaged;
     private WheelFrictionCurve originalFrictionRL, originalFrictionRR;
-    private float unstuckTimer = 0f; // Timer for holding 'T'
-    private bool isUnstuckButtonHeld = false;
-    private Vector3 previousPosition;
-    private float stuckTime = 0f;
 
     void Start()
     {
@@ -29,7 +21,6 @@ public class VehicleController : MonoBehaviour
 
         originalFrictionRL = rlw.sidewaysFriction;
         originalFrictionRR = rrw.sidewaysFriction;
-        previousPosition = transform.position;
     }
 
     private void Update()
@@ -37,30 +28,6 @@ public class VehicleController : MonoBehaviour
         horizontalInput = Input.GetAxis("Horizontal");
         verticalInput = Input.GetAxis("Vertical");
         isHandbrakeEngaged = Input.GetKey(KeyCode.Space);
-
-        // Detect "T" key being held down for unstuck
-        if (Input.GetKey(KeyCode.T))
-        {
-            unstuckTimer += Time.deltaTime;
-            isUnstuckButtonHeld = true;
-        }
-        else
-        {
-            unstuckTimer = 0f;
-            isUnstuckButtonHeld = false;
-        }
-
-        // Check if car is stuck (not moving for a while)
-        if (Vector3.Distance(previousPosition, transform.position) < stuckThreshold)
-        {
-            stuckTime += Time.deltaTime;
-        }
-        else
-        {
-            stuckTime = 0f;
-        }
-
-        previousPosition = transform.position;
     }
 
     void FixedUpdate()
@@ -104,12 +71,6 @@ public class VehicleController : MonoBehaviour
         // Steering
         flw.steerAngle = steerSpeed * horizontalInput;
         frw.steerAngle = steerSpeed * horizontalInput;
-
-        // Check if car is stuck and T is held for 2 seconds
-        if (stuckTime >= 1f && unstuckTimer >= unstuckHoldTime && isUnstuckButtonHeld)
-        {
-            UnstuckVehicle();
-        }
     }
 
     private void AdjustFriction(WheelCollider wheel, float factor)
@@ -122,19 +83,6 @@ public class VehicleController : MonoBehaviour
     private void ResetFriction(WheelCollider wheel, WheelFrictionCurve originalFriction)
     {
         wheel.sidewaysFriction = originalFriction;
-    }
-
-    private void UnstuckVehicle()
-    {
-        // Apply a force to push the car back onto the track
-        Vector3 unstuckDirection = transform.forward * unstuckForce + transform.up * unstuckUpwardForce;
-
-        rb.AddForce(unstuckDirection, ForceMode.Impulse);
-
-        // Optionally, reset other things like stuck timer after unstucking
-        stuckTime = 0f;
-        unstuckTimer = 0f;
-        Debug.Log("Car is unstuck!");
     }
 
     public void ToggleEngine(bool isEnabled)
