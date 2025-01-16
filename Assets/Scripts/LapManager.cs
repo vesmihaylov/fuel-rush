@@ -1,11 +1,11 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class LapManager : MonoBehaviour
 {
     public int totalLaps = 3;
-    public GameObject player;
 
     // UI Elements
     public RaceUI raceUI;
@@ -98,13 +98,13 @@ public class LapManager : MonoBehaviour
 
     private void ToggleVehicle(bool isEnabled)
     {
-        var vehicleController = player.GetComponent<VehicleController>();
-        if (vehicleController == null)
-        {
-            Debug.LogWarning("VehicleController script not found on player object!");
-        }
+        var vehicleControllers = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
+            .OfType<IVehicle>();
 
-        vehicleController.ToggleEngine(isEnabled);
+        foreach (var controller in vehicleControllers)
+        {
+            controller.ToggleEngine(isEnabled);
+        }
     }
 
     private IEnumerator UpdateCompletedLapTimeUI(float lapTime)
