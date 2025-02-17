@@ -1,6 +1,5 @@
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 public class LapManager : MonoBehaviour
@@ -14,27 +13,39 @@ public class LapManager : MonoBehaviour
     private float lapStartTime;
     private float totalRaceTime = 0f;
     private List<float> lapTimes = new List<float>();
-
     private HashSet<GameObject> checkpointsPassed = new HashSet<GameObject>();
     private GameObject[] allCheckpoints;
     private bool lapCompleted = false;
+    private bool isRaceFinished = false;
     private const int StartCountdownSeconds = 5;
+    private IVehicle vehicleController;
 
-    private void Start()
+    private void Awake()
     {
-        ToggleVehicle(false);
-        StartCoroutine(StartRaceCountdown());
+        vehicleController = GetComponent<IVehicle>();
         allCheckpoints = GameObject.FindGameObjectsWithTag("Checkpoint");
+
         raceUI.ToggleRaceFinishedPlaceholder(false);
         raceUI.ToggleCompletedLapTimePlaceholder(false);
         raceUI.ToggleLapLeaderboard(false);
-        raceUI.ToggleStartCountdownPlaceholder(true);
-        raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
+        raceUI.ToggleStartCountdownPlaceholder(false);
+        raceUI.ToggleLapHud(false);
+        if (IsPlayer())
+        {
+            raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
+        }
+
+        vehicleController.ToggleEngine(false);
+    }
+
+    private void Start()
+    {
+        StartCoroutine(StartRaceCountdown());
     }
 
     private void Update()
     {
-        if (currentLap <= totalLaps && !lapCompleted)
+        if (!isRaceFinished && currentLap <= totalLaps && !lapCompleted && IsPlayer())
         {
             raceUI.UpdateCurrentLapTime($"Time: {TimeUtil.FormatTime(Time.time - lapStartTime)}");
         }
@@ -42,6 +53,8 @@ public class LapManager : MonoBehaviour
 
     private void OnTriggerEnter(Collider other)
     {
+        if (isRaceFinished) return;
+
         if (other.CompareTag("Checkpoint") && !checkpointsPassed.Contains(other.gameObject))
         {
             checkpointsPassed.Add(other.gameObject);
@@ -54,40 +67,48 @@ public class LapManager : MonoBehaviour
 
     private void HandleFinishCheckpoint()
     {
-        if (checkpointsPassed.Count == allCheckpoints.Length)
+        if (isRaceFinished || checkpointsPassed.Count != allCheckpoints.Length)
         {
-            lapCompleted = true;
-            float lapEndTime = Time.time;
-            float lapTime = lapEndTime - lapStartTime; // Calculate lap time before resetting lapStartTime
+            return;
+        }
+
+        lapCompleted = true;
+        float lapEndTime = Time.time;
+        float lapTime = lapEndTime - lapStartTime;
+
+        if (IsPlayer())
+        {
             lapTimes.Add(lapTime);
             totalRaceTime += lapTime;
-
-            if (currentLap < totalLaps)
-            {
-                StartCoroutine(UpdateCompletedLapTimeUI(lapTime));
-                currentLap++;
-                lapStartTime = lapEndTime; // Reset the lap timer
-                checkpointsPassed.Clear(); // Reset checkpoints for the new lap
-                lapCompleted = false;
-                raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
-            }
-            else
-            {
-                FinishRace();
-            }
+            StartCoroutine(UpdateCompletedLapTimeUI(lapTime));
         }
-        else
+
+        if (currentLap >= totalLaps)
         {
-            Debug.LogWarning("Finish checkpoint triggered, but not all checkpoints were passed!");
+            FinishRace();
+            return;
+        }
+
+        currentLap++;
+        lapStartTime = lapEndTime;
+        checkpointsPassed.Clear();
+        lapCompleted = false;
+        if (IsPlayer())
+        {
+            raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
         }
     }
 
     private void FinishRace()
     {
-        raceUI.ToggleLapHud(false);
-        ToggleVehicle(false);
-        EnableRaceFinishedText();
-        StartCoroutine(ShowLeaderboardAfterDelay());
+        isRaceFinished = true;
+        vehicleController.ToggleEngine(false);
+        if (IsPlayer())
+        {
+            raceUI.ToggleLapHud(false);
+            EnableRaceFinishedText();
+            StartCoroutine(ShowLeaderboard());
+        }
     }
 
     private void EnableRaceFinishedText()
@@ -96,37 +117,22 @@ public class LapManager : MonoBehaviour
         raceUI.UpdateTotalRaceTime($"{TimeUtil.FormatTime(totalRaceTime)}");
     }
 
-    private void ToggleVehicle(bool isEnabled)
-    {
-        var vehicleControllers = FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None)
-            .OfType<IVehicle>();
-
-        foreach (var controller in vehicleControllers)
-        {
-            controller.ToggleEngine(isEnabled);
-        }
-    }
-
     private IEnumerator UpdateCompletedLapTimeUI(float lapTime)
     {
         raceUI.ToggleCompletedLapTimePlaceholder(true);
 
         string timeDifferenceBetweenLaps = "";
+        Color textColor = Color.white;
 
-        if (lapTimes.Count == 1)
-        {
-            raceUI.UpdateCompletedLapTimePlaceholderColor(Color.white);
-        }
-        else if (lapTimes.Count > 1)
+        if (lapTimes.Count > 1)
         {
             float previousLapTime = lapTimes[lapTimes.Count - 2];
             float timeDifference = lapTime - previousLapTime;
-
             timeDifferenceBetweenLaps = $" ({(timeDifference > 0 ? "+" : "")}{timeDifference:F2})";
-
-            raceUI.UpdateCompletedLapTimePlaceholderColor(timeDifference < 0 ? Color.green : Color.red);
+            textColor = timeDifference < 0 ? Color.green : Color.red;
         }
 
+        raceUI.UpdateCompletedLapTimePlaceholderColor(textColor);
         raceUI.UpdateCompletedLapTimePlaceholderTime(
             $"Lap Time: {TimeUtil.FormatTime(lapTime)}{timeDifferenceBetweenLaps}");
 
@@ -134,18 +140,18 @@ public class LapManager : MonoBehaviour
         raceUI.ToggleCompletedLapTimePlaceholder(false);
     }
 
-    private IEnumerator ShowLeaderboardAfterDelay()
+    private IEnumerator ShowLeaderboard()
     {
         yield return new WaitForSeconds(3f);
-
         raceUI.ToggleRaceFinishedPlaceholder(false);
-
         PopulateLapLeaderboard();
     }
 
     private IEnumerator StartRaceCountdown()
     {
         raceUI.ToggleLapHud(false);
+        raceUI.ToggleStartCountdownPlaceholder(true);
+
         for (int i = StartCountdownSeconds; i > 0; i--)
         {
             raceUI.UpdateStartCountdownPlaceholderText(i.ToString());
@@ -153,11 +159,12 @@ public class LapManager : MonoBehaviour
         }
 
         raceUI.UpdateStartCountdownPlaceholderText("GO!");
-        raceUI.ToggleLapHud(true);
-        ToggleVehicle(true);
-        lapStartTime = Time.time;
-        yield return new WaitForSeconds(1f);
+
+        yield return new WaitForSeconds(0.5f);
         raceUI.ToggleStartCountdownPlaceholder(false);
+        raceUI.ToggleLapHud(true);
+        vehicleController.ToggleEngine(true);
+        lapStartTime = Time.time;
     }
 
     private void PopulateLapLeaderboard()
@@ -165,5 +172,10 @@ public class LapManager : MonoBehaviour
         raceUI.ToggleLapLeaderboard(true);
         raceUI.ClearLapLeaderboard();
         raceUI.PopulateLapLeaderboard(lapTimes);
+    }
+
+    private bool IsPlayer()
+    {
+        return gameObject.CompareTag("Player");
     }
 }
