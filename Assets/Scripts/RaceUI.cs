@@ -11,8 +11,8 @@ public class RaceUI : MonoBehaviour
     public TextMeshProUGUI totalRaceTimePlaceholder;
     public TextMeshProUGUI raceFinishedLabel;
     public TextMeshProUGUI completedLapTimePlaceholder;
-    public List<TextMeshProUGUI> lapNumbersLeaderboardList;
-    public List<TextMeshProUGUI> lapTimesLeaderboardList;
+    public List<TextMeshProUGUI> playerNamesLeaderboardList;
+    public List<TextMeshProUGUI> playerTotalTimeLeaderboardList;
     public GameObject lapLeaderboard;
 
     public void UpdateTotalLapsPlaceholder(int currentLap, int totalLaps)
@@ -75,31 +75,32 @@ public class RaceUI : MonoBehaviour
 
     public void ClearLapLeaderboard()
     {
-        foreach (Transform child in lapNumbersLeaderboardList[0].transform.parent)
+        foreach (Transform child in playerNamesLeaderboardList[0].transform.parent)
         {
-            if (child.gameObject != lapNumbersLeaderboardList[0].gameObject)
+            if (child.gameObject != playerNamesLeaderboardList[0].gameObject)
                 Destroy(child.gameObject);
         }
 
-        foreach (Transform child in lapTimesLeaderboardList[0].transform.parent)
+        foreach (Transform child in playerNamesLeaderboardList[0].transform.parent)
         {
-            if (child.gameObject != lapTimesLeaderboardList[0].gameObject)
+            if (child.gameObject != playerNamesLeaderboardList[0].gameObject)
                 Destroy(child.gameObject);
         }
     }
 
-    public void PopulateLapLeaderboard(List<float> lapTimes)
+    public void PopulateLapLeaderboard(List<(string name, string totalTime)> results)
     {
-        for (int i = 0; i < lapTimes.Count; i++)
+        for (int i = 0; i < results.Count; i++)
         {
-            var lapNumberInstance =
-                Instantiate(lapNumbersLeaderboardList[0], lapNumbersLeaderboardList[0].transform.parent);
-            lapNumberInstance.text = $"Lap {i + 1}";
-            lapNumberInstance.gameObject.SetActive(true);
+            var nameInstance =
+                Instantiate(playerNamesLeaderboardList[0], playerNamesLeaderboardList[0].transform.parent);
+            nameInstance.text = results[i].name;
+            nameInstance.gameObject.SetActive(true);
 
-            var lapTimeInstance = Instantiate(lapTimesLeaderboardList[0], lapTimesLeaderboardList[0].transform.parent);
-            lapTimeInstance.text = TimeUtil.FormatTime(lapTimes[i]);
-            lapTimeInstance.gameObject.SetActive(true);
+            var timeInstance = Instantiate(playerTotalTimeLeaderboardList[0],
+                playerTotalTimeLeaderboardList[0].transform.parent);
+            timeInstance.text = results[i].totalTime;
+            timeInstance.gameObject.SetActive(true);
         }
     }
 }

@@ -10,4 +10,9 @@ public static class TimeUtil
 
         return $"{minutes:00}:{seconds:00}:{milliseconds:00}";
     }
+
+    public static string FormatRaceTimeForLeaderboard(float time)
+    {
+        return time == float.MaxValue ? "DID NOT FINISH" : FormatTime(time);
+    }
 }

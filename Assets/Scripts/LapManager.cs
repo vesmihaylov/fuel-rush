@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class LapManager : MonoBehaviour
 {
@@ -19,6 +20,10 @@ public class LapManager : MonoBehaviour
     private bool isRaceFinished = false;
     private const int StartCountdownSeconds = 5;
     private IVehicle vehicleController;
+    private string racerName;
+
+    private static List<(string name, List<float> times, float totalTime)> finishedRacerResults
+        = new List<(string, List<float>, float)>();
 
     private void Awake()
     {
@@ -36,6 +41,16 @@ public class LapManager : MonoBehaviour
         }
 
         vehicleController.ToggleEngine(false);
+
+        if (IsPlayer())
+        {
+            racerName = "Player";
+        }
+        else
+        {
+            AIVehicleProperties aiProperties = GetComponent<AIVehicleProperties>();
+            racerName = aiProperties != null ? aiProperties.aiName : gameObject.name;
+        }
     }
 
     private void Start()
@@ -76,10 +91,11 @@ public class LapManager : MonoBehaviour
         float lapEndTime = Time.time;
         float lapTime = lapEndTime - lapStartTime;
 
+        lapTimes.Add(lapTime);
+        totalRaceTime += lapTime;
+
         if (IsPlayer())
         {
-            lapTimes.Add(lapTime);
-            totalRaceTime += lapTime;
             StartCoroutine(UpdateCompletedLapTimeUI(lapTime));
         }
 
@@ -103,6 +119,9 @@ public class LapManager : MonoBehaviour
     {
         isRaceFinished = true;
         vehicleController.ToggleEngine(false);
+
+        finishedRacerResults.Add((racerName, new List<float>(lapTimes), totalRaceTime));
+
         if (IsPlayer())
         {
             raceUI.ToggleLapHud(false);
@@ -171,7 +190,40 @@ public class LapManager : MonoBehaviour
     {
         raceUI.ToggleLapLeaderboard(true);
         raceUI.ClearLapLeaderboard();
-        raceUI.PopulateLapLeaderboard(lapTimes);
+        raceUI.PopulateLapLeaderboard(GetSortedRaceResults());
+    }
+
+    private List<(string name, string totalTime)> GetSortedRaceResults()
+    {
+        var raceResults = CollectAllFinishedRacerResults();
+
+        return raceResults
+            .OrderBy(r => r.totalTime)
+            .Select(result => (
+                name: result.name,
+                totalTime: TimeUtil.FormatRaceTimeForLeaderboard(result.totalTime)
+            ))
+            .ToList();
+    }
+
+    private List<(string name, List<float> times, float totalTime)> CollectAllFinishedRacerResults()
+    {
+        var allRacers = GameObject.FindObjectsByType<LapManager>(FindObjectsSortMode.None);
+        var results = new List<(string name, List<float> times, float totalTime)>();
+
+        foreach (var racer in allRacers)
+        {
+            if (racer.isRaceFinished)
+            {
+                results.Add(finishedRacerResults.First(r => r.name == racer.racerName));
+            }
+            else if (!racer.IsPlayer())
+            {
+                results.Add((racer.racerName, new List<float>(), float.MaxValue));
+            }
+        }
+
+        return results;
     }
 
     private bool IsPlayer()
