@@ -1,6 +1,7 @@
 using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
+using UnityEngine.SceneManagement;
 
 public class RaceUI : MonoBehaviour
 {
@@ -102,5 +103,10 @@ public class RaceUI : MonoBehaviour
             timeInstance.text = results[i].totalTime;
             timeInstance.gameObject.SetActive(true);
         }
+    }
+
+    public void OnBackToMainMenuButton()
+    {
+        SceneManager.LoadScene("Main_Menu");
     }
 }
