@@ -15,6 +15,19 @@ public class RaceUI : MonoBehaviour
     public List<TextMeshProUGUI> playerNamesLeaderboardList;
     public List<TextMeshProUGUI> playerTotalTimeLeaderboardList;
     public GameObject lapLeaderboard;
+    private bool isInitialized = false;
+
+    private void Awake()
+    {
+        ToggleRaceFinishedPlaceholder(false);
+        ToggleCompletedLapTimePlaceholder(false);
+        ToggleLapLeaderboard(false);
+        ToggleStartCountdownPlaceholder(false);
+        ToggleLapHud(false);
+        isInitialized = true;
+    }
+
+    public bool IsReady() => isInitialized;
 
     public void UpdateTotalLapsPlaceholder(int currentLap, int totalLaps)
     {

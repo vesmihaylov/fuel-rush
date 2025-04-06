@@ -51,7 +51,8 @@ public class MainMenu : MonoBehaviour
     {
         if (MapExists(mapName))
         {
-            SceneManager.LoadScene(mapName);
+            PlayerPrefs.SetString("SelectedTrack", mapName);
+            SceneManager.LoadScene("Race_Manager");
         }
         else
         {

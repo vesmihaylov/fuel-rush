@@ -9,7 +9,6 @@ public class LapManager : MonoBehaviour
 
     // UI Elements
     public RaceUI raceUI;
-
     private int currentLap = 1;
     private float lapStartTime;
     private float totalRaceTime = 0f;
@@ -21,26 +20,48 @@ public class LapManager : MonoBehaviour
     private const int StartCountdownSeconds = 5;
     private IVehicle vehicleController;
     private string racerName;
+    private RaceManager raceManager;
 
     private static List<(string name, List<float> times, float totalTime)> finishedRacerResults
         = new List<(string, List<float>, float)>();
+
+    public void Initialize(RaceUI ui)
+    {
+        if (ui == null)
+        {
+            Debug.LogError("Null RaceUI passed to LapManager!");
+            return;
+        }
+
+        if (!ui.IsReady())
+        {
+            Debug.LogError("RaceUI is not ready yet!");
+            return;
+        }
+
+        raceUI = ui;
+        UpdateInitialUI();
+    }
+
+    private void UpdateInitialUI()
+    {
+        if (raceUI != null)
+        {
+            if (IsPlayer())
+            {
+                raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
+            }
+        }
+
+        StartCoroutine(StartRaceCountdown());
+    }
 
     private void Awake()
     {
         vehicleController = GetComponent<IVehicle>();
         allCheckpoints = GameObject.FindGameObjectsWithTag("Checkpoint");
-
-        raceUI.ToggleRaceFinishedPlaceholder(false);
-        raceUI.ToggleCompletedLapTimePlaceholder(false);
-        raceUI.ToggleLapLeaderboard(false);
-        raceUI.ToggleStartCountdownPlaceholder(false);
-        raceUI.ToggleLapHud(false);
-        if (IsPlayer())
-        {
-            raceUI.UpdateTotalLapsPlaceholder(currentLap, totalLaps);
-        }
-
         vehicleController.ToggleEngine(false);
+        ToggleAIVehicleEngines(false);
 
         if (IsPlayer())
         {
@@ -55,7 +76,11 @@ public class LapManager : MonoBehaviour
 
     private void Start()
     {
-        StartCoroutine(StartRaceCountdown());
+        raceManager = FindFirstObjectByType<RaceManager>();
+        if (raceManager == null)
+        {
+            Debug.LogError("RaceManager not found!");
+        }
     }
 
     private void Update()
@@ -183,7 +208,23 @@ public class LapManager : MonoBehaviour
         raceUI.ToggleStartCountdownPlaceholder(false);
         raceUI.ToggleLapHud(true);
         vehicleController.ToggleEngine(true);
+        ToggleAIVehicleEngines(true);
+
         lapStartTime = Time.time;
+    }
+
+    private void ToggleAIVehicleEngines(bool isEnabled)
+    {
+        if (raceManager != null)
+        {
+            foreach (var aiController in raceManager.AIControllers)
+            {
+                if (aiController != null)
+                {
+                    aiController.ToggleEngine(isEnabled);
+                }
+            }
+        }
     }
 
     private void PopulateLapLeaderboard()

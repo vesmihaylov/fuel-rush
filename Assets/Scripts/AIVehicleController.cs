@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class AIVehicleController : MonoBehaviour, IVehicle
@@ -24,8 +25,6 @@ public class AIVehicleController : MonoBehaviour, IVehicle
     void Start()
     {
         rb = GetComponent<Rigidbody>();
-        waypoints = waypointManager.waypoints;
-        currentWaypoint = 0;
     }
 
     private void FixedUpdate()
@@ -199,5 +198,11 @@ public class AIVehicleController : MonoBehaviour, IVehicle
 
         isRecovering = false;
         stuckTimer = 0f;
+    }
+
+    public void SetWaypoints(Transform[] newWaypoints)
+    {
+        waypoints = newWaypoints.ToList();
+        currentWaypoint = 0;
     }
 }
