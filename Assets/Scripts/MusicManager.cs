@@ -5,13 +5,13 @@ public class MusicManager : MonoBehaviour
 {
     public AudioSource audioSource;
     public AudioClip[] musicTracks;
-    private const string MapsPrefix = "Map_";
+    private const string RaceManagerScene = "Race_Manager";
 
     void Start()
     {
         string sceneName = SceneManager.GetActiveScene().name;
         
-        if (sceneName.StartsWith(MapsPrefix) && musicTracks.Length > 0)
+        if (sceneName == RaceManagerScene && musicTracks.Length > 0)
         {
             PlayRandomTrack();
         }
