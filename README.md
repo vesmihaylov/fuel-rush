@@ -9,3 +9,8 @@ It's a simple low poly racing game which gives you the ability to race against A
 ![Main Menu image](Screenshots/3.jpg?raw=true "Handbrake drifting")
 ![Main Menu image](Screenshots/4.jpg?raw=true "Finishing last")
 ![Main Menu image](Screenshots/5.jpg?raw=true "Leaderboard")
+
+### April 2025 - New "Cactus Canyon" level & reworks on Arctic Rush
+![Main Menu image](Screenshots/6.jpg?raw=true "Cactus Canyon Level")
+![Main Menu image](Screenshots/7.jpg?raw=true "Cactus Canyon Overlook")
+![Main Menu image](Screenshots/8.jpg?raw=true "Cactus Canyon Race")
