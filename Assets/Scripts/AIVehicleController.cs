@@ -105,29 +105,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         steerInput = Mathf.Clamp(steeringAngle / steerSpeed, -1f, 1f);
         throttleInput = distanceToWaypoint > waypointRange ? 1f : 0f;
 
-        if (isInsideBraking)
-        {
-            // Apply brakes based on the AI drive speed
-            float speed = rb.linearVelocity.magnitude;
-            if (speed > 10f)
-            {
-                throttleInput = -1f;
-            }
-            else if (speed > 5f)
-            {
-                throttleInput = -0.5f;
-            }
-            else
-            {
-                throttleInput = 0f;
-            }
-
-            // If stopped inside braking zone, force movement
-            if (speed < 0.5f)
-            {
-                throttleInput = 1f;
-            }
-        }
+        ApplyInsideBraking();
 
         if (distanceToWaypoint < waypointRange)
         {
@@ -135,7 +113,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         }
     }
 
-    private void NavigateTowardClosestCheckpoint()
+    private void NavigateTowardClosestWaypointAfterUnstuck()
     {
         float closestDistance = float.MaxValue;
         int closestIndex = currentWaypoint;
@@ -165,7 +143,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
             stuckTimer += Time.fixedDeltaTime;
             if (stuckTimer >= stuckTimeThreshold && !isRecovering)
             {
-                StartCoroutine(RecoverFromStuck());
+                StartCoroutine(ApplyUnstuckMovement());
             }
         }
         else
@@ -174,7 +152,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         }
     }
 
-    private IEnumerator RecoverFromStuck()
+    private IEnumerator ApplyUnstuckMovement()
     {
         isRecovering = true;
         Vector3 targetDirection = waypoints[currentWaypoint].position - transform.position;
@@ -193,7 +171,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         ApplyBrakes(0);
         yield return new WaitForSeconds(0.5f);
 
-        NavigateTowardClosestCheckpoint();
+        NavigateTowardClosestWaypointAfterUnstuck();
         yield return new WaitForSeconds(0.5f);
 
         isRecovering = false;
@@ -204,5 +182,32 @@ public class AIVehicleController : MonoBehaviour, IVehicle
     {
         waypoints = newWaypoints.ToList();
         currentWaypoint = 0;
+    }
+    
+    private void ApplyInsideBraking()
+    {
+        if (isInsideBraking)
+        {
+            // Apply brakes based on the AI drive speed
+            float speed = rb.linearVelocity.magnitude;
+            if (speed > 10f)
+            {
+                throttleInput = -1f;
+            }
+            else if (speed > 5f)
+            {
+                throttleInput = -0.5f;
+            }
+            else
+            {
+                throttleInput = 0f;
+            }
+
+            // If stopped inside braking zone, force movement
+            if (speed < 0.5f)
+            {
+                throttleInput = 1f;
+            }
+        }
     }
 }
