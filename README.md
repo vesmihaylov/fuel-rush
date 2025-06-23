@@ -14,3 +14,6 @@ It's a simple low poly racing game which gives you the ability to race against A
 ![Main Menu image](Screenshots/6.jpg?raw=true "Cactus Canyon Level")
 ![Main Menu image](Screenshots/7.jpg?raw=true "Cactus Canyon Overlook")
 ![Main Menu image](Screenshots/8.jpg?raw=true "Cactus Canyon Race")
+
+### June 2025 - New car model & AI will spawn with random vehicle each time
+![Main Menu image](Screenshots/9.jpg?raw=true "New car model 911")
