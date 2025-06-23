@@ -8,7 +8,7 @@ using System.Text.RegularExpressions;
 public class RaceManager : MonoBehaviour
 {
     public GameObject playerPrefab;
-    public GameObject aiPrefab;
+    public List<GameObject> aiPrefabs;
     public int aiCount = 3;
     public float aiSpacing = 1f;
     private Transform playerSpawnPoint;
@@ -107,7 +107,7 @@ public class RaceManager : MonoBehaviour
 
     List<AIVehicleController> SpawnAI()
     {
-        if (aiPrefab == null || playerSpawnPoint == null) return null;
+        if (aiPrefabs == null || aiPrefabs.Count == 0 || playerSpawnPoint == null) return null;
 
         WaypointManager waypointManager = FindFirstObjectByType<WaypointManager>();
         if (waypointManager == null)
@@ -119,7 +119,8 @@ public class RaceManager : MonoBehaviour
         for (int i = 0; i < aiCount; i++)
         {
             Vector3 aiSpawnPoint = playerSpawnPoint.position - playerSpawnPoint.right * (i + 1) * aiSpacing;
-            GameObject aiInstance = Instantiate(aiPrefab, aiSpawnPoint, playerSpawnPoint.rotation);
+            GameObject randomPrefab = aiPrefabs[Random.Range(0, aiPrefabs.Count)];
+            GameObject aiInstance = Instantiate(randomPrefab, aiSpawnPoint, playerSpawnPoint.rotation);
             AIVehicleController aiController = aiInstance.GetComponent<AIVehicleController>();
             if (aiController != null)
             {

@@ -270,7 +270,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 987244957020535566, guid: 817312b1f5e5ce042b0274e557d2a8ab, type: 3}
-  aiPrefab: {fileID: 4821424349838686672, guid: 9e0081cfbdbb8d34ebf6e99a1b656628, type: 3}
+  aiPrefabs:
+  - {fileID: 5839152437422244420, guid: e5ef6329dc198f1489b85f4b9ef5470f, type: 3}
+  - {fileID: 4821424349838686672, guid: 9e0081cfbdbb8d34ebf6e99a1b656628, type: 3}
   aiCount: 3
   aiSpacing: 1
   raceUI: {fileID: 5292769603201651583}
