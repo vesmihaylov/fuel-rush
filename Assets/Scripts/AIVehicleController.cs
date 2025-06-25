@@ -6,7 +6,7 @@ using UnityEngine;
 public class AIVehicleController : MonoBehaviour, IVehicle
 {
     public WaypointManager waypointManager;
-    public List<Transform> waypoints;
+    private List<Transform> waypoints = new();
     public int currentWaypoint;
     public float waypointRange;
     public bool isInsideBraking;
@@ -112,12 +112,15 @@ public class AIVehicleController : MonoBehaviour, IVehicle
     {
         if (waypoints.Count == 0) return;
 
-        var (steering, throttle) = CalculateInputsToWaypoint(waypoints[currentWaypoint].position);
+        var targetWaypoint = waypoints[currentWaypoint];
+        var (steering, throttle) = CalculateInputsToWaypoint(targetWaypoint.position);
+
         steerInput = steering;
         throttleInput = throttle;
+
         ApplyInsideBraking();
 
-        float distanceToWaypoint = Vector3.Distance(transform.position, waypoints[currentWaypoint].position);
+        float distanceToWaypoint = Vector3.Distance(transform.position, targetWaypoint.position);
         if (distanceToWaypoint < waypointRange)
         {
             currentWaypoint = (currentWaypoint + 1) % waypoints.Count;
@@ -126,21 +129,20 @@ public class AIVehicleController : MonoBehaviour, IVehicle
 
     private int FindBestWaypointIndex()
     {
-        float closestDistance = float.MaxValue;
+        float closestScore = float.MaxValue;
         int bestIndex = currentWaypoint;
 
-        // Look at the current waypoint and the next few waypoints
         for (int i = 0; i < Mathf.Min(waypoints.Count, 3); i++)
         {
             int checkIndex = (currentWaypoint + i) % waypoints.Count;
-            float distance = Vector3.Distance(transform.position, waypoints[checkIndex].position);
             Vector3 toWaypoint = waypoints[checkIndex].position - transform.position;
+            float distance = toWaypoint.magnitude;
             float forwardness = Vector3.Dot(transform.forward, toWaypoint.normalized);
             float score = distance / (forwardness > 0 ? forwardness + 0.5f : 0.2f);
-            
-            if (score < closestDistance)
+
+            if (score < closestScore)
             {
-                closestDistance = score;
+                closestScore = score;
                 bestIndex = checkIndex;
             }
         }
@@ -160,7 +162,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
     {
         bool isMovingSlowly = rb.linearVelocity.magnitude < minVelocityThreshold;
         bool isAttemptingToMove = throttleInput > 0.1f;
-        
+
         if (isAttemptingToMove && isMovingSlowly)
         {
             stuckTimer += Time.fixedDeltaTime;
@@ -180,7 +182,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         else
         {
             stuckTimer = 0f;
-            
+
             if (rb.linearVelocity.magnitude > 5f)
             {
                 recoveryAttempts = Mathf.Max(0, recoveryAttempts - 1);
@@ -203,31 +205,31 @@ public class AIVehicleController : MonoBehaviour, IVehicle
             ApplyThrottle(-0.7f);
             ApplySteering(reverseSteer);
             reverseDuration += Time.deltaTime;
-            
+
             if (rb.linearVelocity.magnitude > 2f && Vector3.Dot(rb.linearVelocity, -transform.forward) > 1f)
             {
                 if (reverseDuration > 0.5f)
                     break;
             }
-            
+
             yield return null;
         }
 
         yield return new WaitForSeconds(0.2f);
         NavigateTowardClosestWaypointAfterUnstuck();
-        
+
         float recoveryTimer = 0f;
         float maxRecoveryTime = 1.5f;
-        
+
         while (recoveryTimer < maxRecoveryTime)
         {
             recoveryTimer += Time.deltaTime;
-            
+
             if (rb.linearVelocity.magnitude > 3f)
             {
                 break;
             }
-            
+
             yield return null;
         }
 
@@ -250,18 +252,18 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         Debug.LogWarning($"{gameObject.name} repositioning after {recoveryAttempts} failed attempts");
         int nextWaypointIndex = (currentWaypoint + 1) % waypoints.Count;
         Vector3 waypointPosition = waypoints[nextWaypointIndex].position;
-        
+
         int followingWaypointIndex = (nextWaypointIndex + 1) % waypoints.Count;
         Vector3 followingWaypointPosition = waypoints[followingWaypointIndex].position;
         Vector3 trackDirection = (followingWaypointPosition - waypointPosition).normalized;
-        
+
         if (trackDirection.magnitude < 0.1f)
         {
             trackDirection = transform.forward;
         }
-        
+
         Vector3 newPosition = waypointPosition + Vector3.up * 0.5f;
-        
+
         transform.position = newPosition;
         transform.forward = trackDirection;
         rb.linearVelocity = Vector3.zero;
@@ -269,7 +271,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         isRecovering = false;
         stuckTimer = 0f;
         recoveryAttempts = 0;
-        
+
         currentWaypoint = nextWaypointIndex;
     }
 
@@ -278,7 +280,7 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         if (isInsideBraking)
         {
             float speed = rb.linearVelocity.magnitude;
-            
+
             if (speed > 15f)
             {
                 throttleInput = -0.8f;
@@ -302,9 +304,15 @@ public class AIVehicleController : MonoBehaviour, IVehicle
         }
     }
 
-    public void SetWaypoints(Transform[] newWaypoints)
+    public void SetWaypoints(List<List<Transform>> allWaypointChoices)
     {
-        waypoints = newWaypoints.ToList();
+        waypoints.Clear();
+        foreach (var group in allWaypointChoices)
+        {
+            int randomIndex = Random.Range(0, group.Count);
+            waypoints.Add(group[randomIndex]);
+        }
+
         currentWaypoint = 0;
     }
 }

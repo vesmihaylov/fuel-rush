@@ -37,30 +37,53 @@ public class RaceManager : MonoBehaviour
         yield return new WaitUntil(() => asyncLoad.isDone);
 
         playerSpawnPoint = GameObject.FindGameObjectWithTag("PlayerSpawnPosition")?.transform;
-        Transform[] waypoints = FindWaypoints();
+        List<List<Transform>> waypointGroups = FindWaypoints();
         SpawnPlayer();
         List<AIVehicleController> aiVehicles = SpawnAI();
         foreach (var aiVehicle in aiVehicles)
         {
-            aiVehicle.SetWaypoints(waypoints);
+            aiVehicle.SetWaypoints(waypointGroups);
         }
     }
 
-    Transform[] FindWaypoints()
+    List<List<Transform>> FindWaypoints()
     {
         GameObject waypointsParent = GameObject.Find("Waypoints");
 
-        return waypointsParent.GetComponentsInChildren<Transform>()
+        var all = waypointsParent.GetComponentsInChildren<Transform>()
             .Where(t => t != waypointsParent.transform)
-            .OrderBy(obj => ExtractNumber(obj.name)) // Sort by the extracted number
-            .Select(obj => obj.transform)
-            .ToArray();
+            .OrderBy(t => ExtractBaseWaypointNumber(t.name))
+            .ToList();
+
+        List<List<Transform>> result = new();
+        int currentIndex = -1;
+        List<Transform> group = new();
+
+        foreach (var waypoint in all)
+        {
+            int index = ExtractBaseWaypointNumber(waypoint.name);
+            if (index != currentIndex)
+            {
+                if (group.Count > 0)
+                    result.Add(group);
+
+                group = new List<Transform>();
+                currentIndex = index;
+            }
+
+            group.Add(waypoint);
+        }
+
+        if (group.Count > 0)
+            result.Add(group);
+
+        return result;
     }
 
-    int ExtractNumber(string waypointName)
+    int ExtractBaseWaypointNumber(string name)
     {
-        Match match = Regex.Match(waypointName, @"\d+");
-        return match.Success ? int.Parse(match.Value) : int.MaxValue;
+        var digits = Regex.Match(name, @"\d+");
+        return digits.Success ? int.Parse(digits.Value) : 0;
     }
 
     void SpawnPlayer()
